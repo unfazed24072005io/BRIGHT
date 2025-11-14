@@ -1,50 +1,32 @@
-const express = require("express");
-const fetch = require("node-fetch");
-const cors = require("cors");
-require("dotenv").config();
+// Install dependencies: npm install express axios cors
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
-app.use(cors()); // allow requests from any origin
 
-// Use your Bright Data API key in an environment variable
-const API_KEY = process.env.BRIGHTDATA_API_KEY;
+const ZENROWS_API_KEY = '9c2e1ae26fa9205e835a31186e4f538988c7846a';
 
-// POST endpoint to search for jobs
-app.post("/api/jobs", async (req, res) => {
-  const { keyword, location } = req.body;
-
-  if (!keyword || !location) {
-    return res.status(400).json({ error: "keyword and location are required" });
-  }
+app.get('/scrape', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing URL parameter' });
 
   try {
-    // Build LinkedIn search URL (or use the Bright Data endpoint)
-    const searchUrl = `https://www.linkedin.com/jobs/search?keywords=${encodeURIComponent(
-      keyword
-    )}&location=${encodeURIComponent(location)}`;
-
-    // Call Bright Data API
-    const response = await fetch("https://api.brightdata.com/linkedin/jobs", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
+    const response = await axios.get('https://api.zenrows.com/v1/', {
+      params: {
+        url,
+        apikey: ZENROWS_API_KEY,
+        js_render: true,
       },
-      body: JSON.stringify({
-        input: [{ url: searchUrl }]
-      }),
     });
 
-    const data = await response.json();
-    res.json(data);
-
+    res.json({ html: response.data });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to fetch jobs" });
+    res.status(500).json({ error: 'Failed to fetch page' });
   }
 });
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(3000, () => console.log('Server running on http://localhost:3000'));
